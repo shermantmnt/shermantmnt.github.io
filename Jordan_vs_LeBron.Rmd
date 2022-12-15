@@ -1,0 +1,179 @@
+---
+title: "Jordan vs LeBron"
+author: "Sherman Li"
+date: "2022-12-10"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = TRUE, eval = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(magrittr) 
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+```
+
+## Michael Jordan and LeBron James are debated to be the greatest basketball players of all time. This analysis will compare both players using general career statistics. While LeBron is an active NBA player, the data set shows his stats up until March 21st, 2018.
+
+## Comparing general statistics, who is the greatest NBA player of all time?
+
+## Reading LeBron data set.
+```{r}
+lebron <- read_csv("lebron_career.csv")
+jordan <- read_csv("jordan_career.csv")
+```
+## Separating date, age, and result for both data sets.
+```{r}
+lebron<-separate(lebron,"date",c("Year", "Month", "Day"), sep = "-")
+lebron<-separate(lebron,"age",c("Age_Year","Age_Day"),sep="-")
+lebron<-separate(lebron,"result",c("result","differential"),sep = " ")
+lebron
+
+jordan<-  separate(jordan,"date",c("Year", "Month", "Day"), sep = "-")
+jordan<-separate(jordan,"age",c("Age_Year","Age_Day"),sep="-")
+jordan<-separate(jordan,"result",c("result","differential"),sep = " ")
+jordan
+```
+
+
+## Calculating the averages of LeBron's Offense.
+```{r}
+lebron_off <- lebron %>%
+  mutate(Games_Played=length(game),
+         ThreePT_Percent=sum(three,na.rm=TRUE)/sum(threeatt,na.rm = TRUE),
+         Total_FG_Percent=sum(fg,na.rm=TRUE)/sum(fga,na.rm = TRUE)) %>%
+  group_by(Games_Played) %>%
+  summarise(PPG=mean(pts,na.rm =TRUE),
+            APG=mean(ast,na.rm=TRUE),
+            Total_FG_Percent=Total_FG_Percent,
+            ThreePT_Percent=ThreePT_Percent,
+            AVG_Plus_Minus=mean(minus_plus,na.rm=TRUE),
+            Sum_Plus_Minus=sum(minus_plus,na.rm = TRUE))
+lebron_off[1,]
+```
+## Calculating the averages of Jordan's Offense
+```{r}
+jordan_off <- jordan %>%
+  mutate(Games_Played=length(game),
+         ThreePT_Percent=sum(three,na.rm=TRUE)/sum(threeatt,na.rm = TRUE),
+         Total_FG_Percent=sum(fg,na.rm=TRUE)/sum(fga,na.rm = TRUE)) %>%
+  group_by(Games_Played) %>%
+  summarise(PPG=mean(pts,na.rm =TRUE),
+            APG=mean(ast,na.rm=TRUE),
+            Total_FG_Percent=Total_FG_Percent,
+            ThreePT_Percent=ThreePT_Percent)
+jordan_off[1,]
+```
+
+## LeBron has played 1132 games (many more at present) while Jordan has only played 1072 games. During these games, Jordan has had a higher average of 30.1 points per game than LeBron's 27.1 points per game. However, LeBron has exceeded Jordan in aspects such as assists per game where LeBron has dealt 7.2 a game versus Jordan's 5.3 a game. LeBron has also shot the ball better with a 50.4% field goal and a 34.4% 3-pointers made. Jordan on the other hand, shot lower with a 49.7% field goal and a 32.7% 3-pointers made. In terms of output, Jordan is ahead with just points per game. LeBron shows to be more efficient with his made shots and the ability to have his teammates score.
+
+
+## Calculating the averages of LeBron and Jordan's Defense
+```{r}
+lebron_def<-lebron%>%
+  mutate(Games_Played=length(game))%>%
+  group_by(Games_Played)%>%
+  summarise(mean(stl),mean(blk))
+lebron_def
+
+jordan_def<-jordan%>%
+  mutate(Games_Played=length(game))%>%
+  group_by(Games_Played)%>%
+  summarise(mean(stl),mean(blk))
+jordan_def
+```
+
+## While there are many other stats that can determine how efficient a player is on defense, the most general statistics to determine one's defense is their steals and blocks. LeBron averaged 1.64 steals and 0.78 blocks a game throughout his career while Jordan averaged 2.3 steals and 0.83 blocks per game. Many factors contribute to defense but according to the base stats of steals and blocks, Jordan is the better player defensively.
+
+
+
+
+## Creating Points per game comparison.
+```{r}
+lebron_points<-lebron%>%
+  group_by(Age_Year)%>%
+  summarise(PPG=mean(pts,na.rm =TRUE))
+jordan_points<-jordan%>%
+  group_by(Age_Year)%>%
+  summarise(PPG=mean(pts,na.rm =TRUE))
+PPG_Comparison<-ggplot()+ 
+  geom_line(data = lebron_points, aes(x = Age_Year, y = PPG,group=1), color = "blue") + 
+  geom_text(data=lebron_points, aes(x = "21",y=31,group=1),label="Lebron",color="blue") +
+  geom_line(data = jordan_points, aes(x = Age_Year, y = PPG,group=1), color = "red") +
+  geom_text(data = jordan_points, aes(x = "25",y=37,group=1),label="Jordan",color="red") +
+  xlab('Age') +
+  ylab('Points Per Game')
+print(PPG_Comparison)
+```
+
+## Jordan started playing in the NBA at the age of 21 while LeBron started at 18. Jordan has the highest points per game at the age of 35 with 35.9 PPG. He also has the lowest points per game at the age of 39 with 17.9 PPG. LeBron at 18 was at his lowest with 20.2 PPG. He improved to a 30.2 PPG at the age of 21. LeBron has shown to maintain his level of scoring throughout his career. The latest age of this data set shows that at 33 years of age, Lebron has maintained 27 PPG. If LeBron maintains this until the end of his career, he will succeed Jordan in consistency and longevity. However, during both of their peaks, it is clear that Jordan was the greater scorer than LeBron.
+
+
+## Comparing LeBron's number of wins and losses.
+```{r}
+lebron_record<-lebron%>%
+  group_by(team)%>%
+  summarise(Wins=sum(result=="W"),
+            Losses=sum(result=="L"),
+            Win_Percent=(sum(result=="W")/length(result)),
+            Games=n(),
+            .groups = "drop")
+lebron_record
+
+lebron_record1<-lebron%>%
+  group_by(team)%>%
+  summarise(Wins=sum(result=="W"),
+            Losses=sum(result=="L"),
+            Win_Percent=(sum(result=="W")/length(result)),
+            Games=n(),
+            result,
+            .groups = "drop")
+ggplot(lebron_record1,mapping=aes(x=result))+geom_bar(stat = "count")+facet_grid(~team)
+```
+
+## The bar graph shows that LeBron has played many more games in Cleveland than in Miami. LeBron played a total of 838 game in Cleveland and 294 games in Miami. Though he played less games in Miami, he does have a better win percentage of 73.1% than his win percentage of 64.2% in Cleveland. (Data doesn't account for his current team in Los Angeles)
+
+
+
+```{r}
+jordan_record<-jordan%>%
+  group_by(team)%>%
+  summarise(Wins=sum(result=="W"),
+            Losses=sum(result=="L"),
+            Win_Percent=(sum(result=="W")/length(result)),
+            Games=n(),
+            .groups = "drop")
+jordan_record
+
+jordan_record1<-jordan%>%
+  group_by(team)%>%
+  summarise(Wins=sum(result=="W"),
+            Losses=sum(result=="L"),
+            Win_Percent=(sum(result=="W")/length(result)),
+            Games=n(),
+            result,
+            .groups = "drop")
+ggplot(jordan_record1,mapping=aes(x=result))+geom_bar(stat = "count")+facet_grid(~team)
+```
+
+## Jordan played a total of 930 games in Chicago and 142 games in Washington. He had a win percentage of 68.7% in Chicago and 47.2% in Washington. Jordan had a negative record of 67-75 in Washington most likely due to his age. Comparing both bar plots, LeBron seemed to have the more superior win percentage in Miami than Jordan on any of his teams.
+
+## Plotting LeBron's average Plus Minus throughout each year of his career.
+```{r}
+lebron_plus_minus<-lebron%>%
+  mutate(Plus_Minus=minus_plus)%>%
+  group_by(Year)%>%
+  summarise(Plus_Minus=mean(minus_plus))
+ggplot(lebron_plus_minus,mapping = aes(x=Year,y=Plus_Minus,group=1))+geom_point()+geom_line()
+```
+
+## Plus minus in basketball is defined as the point differential between you and the opposing team while you are playing on the court. This is used to determine the effectiveness of the player when they are playing. LeBron's average plus minus was from 2008-2016 showing his peak years of play. The plot also shows how he improved from his rookie season and how he fell behind once he started to get much older. He had a positive plus minus for most of his career showing how important he was towards his team's success. Unfortunately, the Jordan data set doesn't have the plus minus for his games.
+
+
+## Conclusion
+## This analysis used very basic stats in trying to understand who is better between LeBron James and Michael Jordan. The analyis could go in depth with many more pieces of statistics that were recorded throughout their careers. One thing however that was proven through this analysis, Jordan and LeBron are two of the greatest basketball players to ever play the game and their statistics prove that they are very comparable. At the end of the day, both players clearly have evidence that supports why one is greater than the other.
