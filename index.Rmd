@@ -9,4 +9,4 @@ Education
 -Baruch College, City University of New York, 2024.
 
 - [Data science NYC tlc zone analysis](tlc_zone.html)
-- [Jordan vs LeBron analysis](Lebron_vs_Jordan.html)
+- [Jordan vs LeBron analysis](Jordan_vs_LeBron.html)
