@@ -1,0 +1,121 @@
+---
+title: "TLC Zone"
+author: "Sherman Li"
+output:
+  html_document:
+    df_print: paged
+  '"pdf_document"': default
+  word_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      fig.align ="center", out.width = "60%", 
+                      message = FALSE, warning = FALSE) 
+library(arrow)
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(ggmap)
+```
+
+```{r}
+tlc <- read_parquet(file = "yellow_tripdata_2022-06.parquet")
+tlc
+```
+
+```{r}
+tlc_zone <- st_read("taxi_zones/taxi_zones.shp", quiet = TRUE)
+ggplot(tlc_zone) + geom_sf() + theme_inset() + theme_bw()
+```
+
+```{r}
+tlc_zone <- st_transform(tlc_zone, crs = 4326) # map projection
+ggplot(tlc_zone) + geom_sf(extent ="device")
+```
+
+```{r}
+our_neighbourhood <- tlc_zone %>% filter(zone == "Gramercy" | zone == "KipsBay")
+ggplot(tlc_zone) + geom_sf() + theme_inset() + geom_sf(data = our_neighbourhood, fill = "red")
+```
+
+```{r}
+bbox <- st_bbox(tlc_zone) %>% as.numeric
+bbox
+```
+
+
+```{r}
+nyc_map <- get_stamenmap(bbox = bbox, messaging = FALSE, zoom = 11,
+                         maptype = "toner-lite", format = c("png"))
+
+ggmap(nyc_map) + geom_sf(data = our_neighbourhood, fill = "red", inherit.aes = FALSE)
+```
+```{r}
+pu_count <- tlc %>% group_by(PULocationID) %>% tally()
+pu_count
+```
+```{r}
+pu_count <- tlc %>% group_by(PULocationID) %>%
+  summarise(N=n()) %>% rename(LocationID = PULocationID)
+```
+
+```{r}
+joined_tbl <- left_join(tlc_zone, pu_count, by = "LocationID") %>% filter(borough == "Manhattan") 
+```
+
+```{r}
+joined_tbl
+```
+
+
+```{r}
+ggplot(joined_tbl %>% filter(borough=="Manhattan")) + geom_sf() + aes(fill = N) + scale_fill_viridis_c(option = "A")
+```
+
+```{r}
+ggmap(nyc_map) + geom_sf(data = joined_tbl, aes(fill = N), inherit.aes = FALSE) + scale_fill_viridis_c(option = "A")
+```
+
+
+```{r}
+random_locs <- (st_sample(our_neighbourhood, type="random", size = 620))
+ggplot() + geom_sf(data = our_neighbourhood) + geom_sf(data = random_locs)
+```
+
+```{r}
+tlc_zone_new <- left_join(tlc_zone, pu_count, by = "LocationID") %>% filter(borough == "Manhattan")
+```
+
+```{r}
+tlc_zone_new$N[is.na(tlc_zone_new$N)] = 0
+```
+
+```{r}
+
+
+tlc_zone_manhattan<-
+  tlc_zone%>%filter(borough=="Manhattan")
+bbox_manhattan <- st_bbox(tlc_zone_manhattan) %>% as.numeric
+
+manhattan_map <- get_stamenmap(bbox = bbox_manhattan, messaging = FALSE, zoom = 11,
+                         maptype = "toner-lite", format = c("png"))
+
+
+ggmap(nyc_map) + geom_sf(data = our_neighbourhood, fill = "red", inherit.aes = FALSE)
+storage <- list()
+map_output<-ggmap(manhattan_map)
+for (zone_id in 1:nrow(tlc_zone_new)){
+  
+  zone <- tlc_zone_new[zone_id,]
+  zone$N[is.na(zone$N)]<-0
+  sampled_points <- zone %>% st_sample(type = "random", size = round((zone$N/100)))
+  
+  storage[[zone_id]] <- sampled_points
+  map_output<-map_output+geom_sf(data=storage[[zone_id]],inherit.aes = FALSE,size=0.1,alpha=0.1)
+}
+map_output
+```
+
+
+
+
